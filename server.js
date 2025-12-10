@@ -81,7 +81,7 @@ Pet.belongsTo(Usuario, { as: 'Adotante', foreignKey: 'adotanteId' });
 
 // Sincroniza o banco (Cria tabelas se não existirem e adiciona colunas)
 sequelize.sync({ force: false }) 
-    .then(() => {
+    .then((async) => {
         console.log("✅ Banco de dados sincronizado!");
         
         // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
