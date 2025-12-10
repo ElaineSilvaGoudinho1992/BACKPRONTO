@@ -80,8 +80,8 @@ Pet.belongsTo(Usuario, { as: 'Adotante', foreignKey: 'adotanteId' });
 
 
 // Sincroniza o banco (Cria tabelas se não existirem e adiciona colunas)
-sequelize.sync({ alter: true }) 
-    .then(async () => {
+sequelize.sync({ force: false }) 
+    .then(() => {
         console.log("✅ Banco de dados sincronizado!");
         
         // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
@@ -309,6 +309,9 @@ app.put('/api/pets/:id', async (req, res) => {
 
 // 4. INICIAR SERVIDOR
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    });
+}).catch((error) => {
+    console.error('❌ Erro ao conectar no banco:', error);
 });
