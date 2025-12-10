@@ -1,23 +1,12 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Sequelize, DataTypes, Op } = require('sequelize');
-require('dotenv').config();
+const sequelize = require('./db')
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// Configuração para Supabase
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    logging: false,
-    dialectOptions: {
-        ssl: {
-            require: true,
-            rejectUnauthorized: false
-        }
-    }
-});
 
 // 2. MODELOS DO BANCO (ATUALIZADOS)
 
@@ -32,17 +21,17 @@ const Pet = sequelize.define('Pets', {
     porte: { type: DataTypes.STRING, defaultValue: 'Médio' },
     vacinas: { type: DataTypes.BOOLEAN, defaultValue: false },
     imagemUrl: { type: DataTypes.TEXT, field: 'imagem_url' },
-    
+
     // NOVO CAMPO: Status de Adoção (substitui 'disponivel')
-    statusAdocao: { 
-        type: DataTypes.STRING, 
-        defaultValue: 'Disponível', 
-        allowNull: false 
+    statusAdocao: {
+        type: DataTypes.STRING,
+        defaultValue: 'Disponível',
+        allowNull: false
     },
     // NOVO CAMPO: Referência ao Usuário que adotou (chave estrangeira)
-    adotanteId: { 
-        type: DataTypes.INTEGER, 
-        allowNull: true 
+    adotanteId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 });
 
@@ -80,36 +69,36 @@ Pet.belongsTo(Usuario, { as: 'Adotante', foreignKey: 'adotanteId' });
 
 
 sequelize
-  .sync({ force: false })
-  .then(async () => {   // <-- AGORA O THEN É ASYNC
-    console.log('✅ Banco de dados sincronizado e tabelas criadas!');
+    .sync({ force: false })
+    .then(async () => {   // <-- AGORA O THEN É ASYNC
+        console.log('✅ Banco de dados sincronizado e tabelas criadas!');
 
-    // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
-    const adminExists = await Usuario.findOne({ where: { email: 'admin@finalfeliz.com' } });
+        // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
+        const adminExists = await Usuario.findOne({ where: { email: 'admin@finalfeliz.com' } });
 
-    if (!adminExists) {
-      await Usuario.create({
-        nome: 'Administrador Padrão',
-        email: 'admin@finalfeliz.com',
-        senha: 'admin', // Mude no futuro!
-        isAdmin: true,
-        tipoUsuario: 'Admin',
-        telefone: '0000',
-        endereco: 'Rua do Admin',
-        cpf: '00000000000'
-      });
+        if (!adminExists) {
+            await Usuario.create({
+                nome: 'Administrador Padrão',
+                email: 'admin@finalfeliz.com',
+                senha: 'admin', // Mude no futuro!
+                isAdmin: true,
+                tipoUsuario: 'Admin',
+                telefone: '0000',
+                endereco: 'Rua do Admin',
+                cpf: '00000000000'
+            });
 
-      console.log("-> Admin padrão criado: admin@finalfeliz.com / admin");
-    }
+            console.log("-> Admin padrão criado: admin@finalfeliz.com / admin");
+        }
 
-    // Só inicia o servidor DEPOIS de sincronizar e criar admin
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    });
+        // Só inicia o servidor DEPOIS de sincronizar e criar admin
+        const PORT = process.env.PORT || 3001;
+        app.listen(PORT, () => {
+            console.log(`🚀 Servidor rodando na porta ${PORT}`);
+        });
 
-  })
-  .catch(err => console.error("❌ Erro no banco:", err));
+    })
+    .catch(err => console.error("❌ Erro no banco:", err));
 
 // 3. ROTAS DA API
 
@@ -117,17 +106,17 @@ sequelize
 app.post('/api/login', async (req, res) => {
     try {
         const { email, senha } = req.body;
-        const user = await Usuario.findOne({ where: { email, senha } }); 
+        const user = await Usuario.findOne({ where: { email, senha } });
         if (user) {
-            res.json({ 
-                success: true, 
-                user: { 
+            res.json({
+                success: true,
+                user: {
                     id: user.id,
-                    nome: user.nome, 
+                    nome: user.nome,
                     email: user.email,
                     isAdmin: user.isAdmin,
-                    tipoUsuario: user.tipoUsuario 
-                } 
+                    tipoUsuario: user.tipoUsuario
+                }
             });
         } else {
             res.status(401).json({ success: false, message: 'Email ou senha incorretos' });
@@ -154,19 +143,19 @@ app.post('/api/adocao', async (req, res) => {
     try {
         // Assume que req.body contém petId, usuarioId e os campos do formulário
         const { petId } = req.body;
-        
+
         // 1. Verifica se o pet está disponível para evitar spam
         const pet = await Pet.findByPk(petId);
         if (!pet || pet.statusAdocao !== 'Disponível') {
-             return res.status(400).json({ success: false, message: `O pet não está disponível (Status: ${pet.statusAdocao}).` });
+            return res.status(400).json({ success: false, message: `O pet não está disponível (Status: ${pet.statusAdocao}).` });
         }
 
         // 2. Cria a solicitação de adoção (status 'Pendente' por padrão)
-        await Adocao.create(req.body); 
-        
+        await Adocao.create(req.body);
+
         // 3. ATUALIZA o status do Pet para 'Em Análise'
         await Pet.update({ statusAdocao: 'Em Análise' }, {
-            where: { id: petId } 
+            where: { id: petId }
         });
 
         res.json({ success: true, message: 'Solicitação de adoção registrada com sucesso! O pet está agora "Em Análise".' });
@@ -204,7 +193,7 @@ app.put('/api/adocoes/:id', async (req, res) => {
         const adocao = await Adocao.findByPk(id);
 
         if (!adocao) {
-             return res.status(404).json({ success: false, message: 'Solicitação de adoção não encontrada.' });
+            return res.status(404).json({ success: false, message: 'Solicitação de adoção não encontrada.' });
         }
 
         // 2. Atualiza o status da Adocao
@@ -213,17 +202,17 @@ app.put('/api/adocoes/:id', async (req, res) => {
         // 3. Lógica para Pet e outras Adoções
         if (status === 'Aprovada') {
             // Se APROVADA: Pet vai para 'Adotado' e registra quem adotou
-            await Pet.update({ 
+            await Pet.update({
                 statusAdocao: 'Adotado',
                 adotanteId: adocao.usuarioId // Usa o ID do usuário da solicitação aprovada
             }, { where: { id: adocao.petId } });
-            
+
             // Rejeita automaticamente as outras PENDENTES
             await Adocao.update({ status: 'Rejeitada' }, {
                 where: { petId: adocao.petId, id: { [Op.ne]: id }, status: 'Pendente' }
             });
             return res.json({ success: true, message: 'Solicitação aprovada. Pet marcado como ADOTADO.' });
-        
+
         } else if (status === 'Rejeitada') {
             // Se REJEITADA:
             // 1. Verifica se há outras solicitações 'Pendente' para o Pet
@@ -253,9 +242,9 @@ app.get('/api/pets', async (req, res) => {
         const pets = await Pet.findAll({
             // Inclui o Adotante (Usuário) se houver um adotanteId
             include: [
-                { 
-                    model: Usuario, 
-                    as: 'Adotante', 
+                {
+                    model: Usuario,
+                    as: 'Adotante',
                     attributes: ['nome'], // Apenas o nome é necessário para o frontend
                     required: false // LEFT JOIN: Retorna Pets mesmo que não tenham Adotante
                 }
@@ -272,7 +261,7 @@ app.get('/api/pets', async (req, res) => {
 app.post('/api/pets', async (req, res) => {
     try {
         // Garante que o pet é criado como 'Disponível' por padrão (configurado no modelo)
-        const novoPet = await Pet.create(req.body); 
+        const novoPet = await Pet.create(req.body);
         res.status(201).json({ success: true, pet: novoPet });
     } catch (error) {
         console.error(error);
@@ -315,11 +304,12 @@ app.put('/api/pets/:id', async (req, res) => {
 });
 
 // Usa a porta do Render ou a 3001 localmente
-    const PORT = process.env.PORT || 3001;
-    
+const PORT = process.env.PORT || 3001;
+
+try {
     app.listen(PORT, () => {
         console.log(`🚀 Servidor rodando na porta ${PORT}`);
     });
-}).catch((error) => {
+} catch (error) {
     console.error('❌ Erro fatal ao conectar no banco:', error);
-});
+}
