@@ -79,27 +79,37 @@ Usuario.hasMany(Adocao, { foreignKey: 'usuarioId' });
 Pet.belongsTo(Usuario, { as: 'Adotante', foreignKey: 'adotanteId' });
 
 
-sequelize.sync({ force: false }).then(() => {
+sequelize
+  .sync({ force: false })
+  .then(async () => {   // <-- AGORA O THEN É ASYNC
     console.log('✅ Banco de dados sincronizado e tabelas criadas!');
-        
-        // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
-        const adminExists = await Usuario.findOne({ where: { email: 'admin@finalfeliz.com' } });
-        if (!adminExists) {
-            await Usuario.create({
-                nome: 'Administrador Padrão',
-                email: 'admin@finalfeliz.com',
-                senha: 'admin', // Mude esta senha!
-                isAdmin: true,
-                tipoUsuario: 'Admin',
-                telefone: '0000',
-                endereco: 'Rua do Admin',
-                cpf: '00000000000'
-            });
-            console.log("-> Admin padrão criado: admin@finalfeliz.com / admin");
-        }
 
-    })
-    .catch(err => console.error("❌ Erro no banco:", err));
+    // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
+    const adminExists = await Usuario.findOne({ where: { email: 'admin@finalfeliz.com' } });
+
+    if (!adminExists) {
+      await Usuario.create({
+        nome: 'Administrador Padrão',
+        email: 'admin@finalfeliz.com',
+        senha: 'admin', // Mude no futuro!
+        isAdmin: true,
+        tipoUsuario: 'Admin',
+        telefone: '0000',
+        endereco: 'Rua do Admin',
+        cpf: '00000000000'
+      });
+
+      console.log("-> Admin padrão criado: admin@finalfeliz.com / admin");
+    }
+
+    // Só inicia o servidor DEPOIS de sincronizar e criar admin
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    });
+
+  })
+  .catch(err => console.error("❌ Erro no banco:", err));
 
 // 3. ROTAS DA API
 
