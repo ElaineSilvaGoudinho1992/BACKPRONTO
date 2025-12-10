@@ -79,10 +79,8 @@ Usuario.hasMany(Adocao, { foreignKey: 'usuarioId' });
 Pet.belongsTo(Usuario, { as: 'Adotante', foreignKey: 'adotanteId' });
 
 
-// Sincroniza o banco (Cria tabelas se não existirem e adiciona colunas)
-sequelize.sync({ force: false }) 
-    .then((async) => {
-        console.log("✅ Banco de dados sincronizado!");
+sequelize.sync({ force: false }).then(() => {
+    console.log('✅ Banco de dados sincronizado e tabelas criadas!');
         
         // CRIAÇÃO DE UM ADMIN PADRÃO (SE NÃO EXISTIR)
         const adminExists = await Usuario.findOne({ where: { email: 'admin@finalfeliz.com' } });
@@ -306,12 +304,12 @@ app.put('/api/pets/:id', async (req, res) => {
     }
 });
 
-
-// 4. INICIAR SERVIDOR
-const PORT = process.env.PORT || 3001;
+// Usa a porta do Render ou a 3001 localmente
+    const PORT = process.env.PORT || 3001;
+    
     app.listen(PORT, () => {
         console.log(`🚀 Servidor rodando na porta ${PORT}`);
     });
 }).catch((error) => {
-    console.error('❌ Erro ao conectar no banco:', error);
+    console.error('❌ Erro fatal ao conectar no banco:', error);
 });
